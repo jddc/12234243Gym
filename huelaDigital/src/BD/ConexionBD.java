@@ -1,8 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 
 package BD;
 
@@ -20,9 +16,9 @@ import javax.swing.JOptionPane;
 public class ConexionBD {
     public String puerto = "3306";
     public String nomServidor = "localhost";
-    public String db = "huellas";
+    public String db = "gym";
     public String user = "root";
-    public String pass = "root";
+    public String pass = "";
     Connection conn = null;
     
     public Connection conectar(){

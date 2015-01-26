@@ -242,7 +242,7 @@ public class capturaHuella extends javax.swing.JFrame {
     
     public void guardarFoto(){
         imgFoto = b.getImagen();
-        urlFoto = "C:\\Users\\joshua\\Desktop\\GYM\\fotosUsuarios\\user_"+nombreUsuario+".jpg";
+        urlFoto = "/fotosUsuarios/user_"+nombreUsuario+".jpg";
         try {
           ImageIO.write((RenderedImage) imgFoto, "jpg", new File(urlFoto));
           EnviarTexto("Se guardo la imagen del usuario correctamente");
@@ -354,37 +354,9 @@ public class capturaHuella extends javax.swing.JFrame {
     }//Termina identificarHuella
     
     public void cargarFoto(){
-        //BufferedImage foto = null;
-        //Graphics g;
-        
-        
-JLabel img = new JLabel(" ");
-
-ImageIcon image = new ImageIcon(urlFoto);
-
-panelFoto.add(img); // "dibujar" es mi panel ok...
-
-//Propiedades de la etiqueta
-img.setIcon(image);
-img.setSize(135,135);
-img.setLocation(550,20);
-img.setVisible(true); 
-        //ImageIcon pic = new ImageIcon(urlFoto);
-        
-       // System.out.println(pic)
-      
-        //System.out.println(urlFoto);
-      // panelFoto.add(new JLabel(pic));
-       
-       img.setIcon(image);
-       img.setSize(135,135);
-img.setLocation(550,20);
-img.setVisible(true); 
-       
-       
+        CargarImagen imagen = new CargarImagen(urlFoto);
+        imagen.dibujaImagen(panelFoto.getGraphics());
     }
-    
- 
  
     /**
      * This method is called from within the constructor to initialize the form.
@@ -508,6 +480,11 @@ img.setVisible(true);
         jScrollPane1.setViewportView(txtStatus);
 
         comboDispositivos.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        comboDispositivos.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                comboDispositivosActionPerformed(evt);
+            }
+        });
 
         btnIniciar.setText("Iniciar");
         btnIniciar.addActionListener(new java.awt.event.ActionListener() {
@@ -529,11 +506,11 @@ img.setVisible(true);
         panelFoto.setLayout(panelFotoLayout);
         panelFotoLayout.setHorizontalGroup(
             panelFotoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 251, Short.MAX_VALUE)
+            .addGap(0, 319, Short.MAX_VALUE)
         );
         panelFotoLayout.setVerticalGroup(
             panelFotoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 255, Short.MAX_VALUE)
+            .addGap(0, 257, Short.MAX_VALUE)
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -552,11 +529,13 @@ img.setVisible(true);
                             .addComponent(PanHue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(38, 38, 38)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(comboDispositivos, javax.swing.GroupLayout.PREFERRED_SIZE, 218, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(btnIniciar, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(31, 31, 31)
                                 .addComponent(btnTomar))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(73, 73, 73)
+                                .addComponent(comboDispositivos, javax.swing.GroupLayout.PREFERRED_SIZE, 218, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addComponent(panelFoto, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(37, Short.MAX_VALUE))
         );
@@ -605,6 +584,7 @@ img.setVisible(true);
         Vector listaDispositivos = null;
         //OBTENER TODOS LOS DISPOSITIVOS INSYTALADOS
         listaDispositivos = CaptureDeviceManager.getDeviceList(null);
+        
         for (int i = 0; i < listaDispositivos.size(); i++) {
             //OBETNER INFORMACION DEL DISPOSITIVO
             CaptureDeviceInfo info = (CaptureDeviceInfo) listaDispositivos.get(i);
@@ -663,7 +643,7 @@ img.setVisible(true);
     Component comp;
     private void btnIniciarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnIniciarActionPerformed
         
-        /*try {
+       /*try {
             dispositivoSeleccionado = comboDispositivos.getSelectedItem().toString();
             //SE OBTIENE EL DISPOSITIVO
             CaptureDeviceInfo device = CaptureDeviceManager.getDevice(dispositivoSeleccionado);
@@ -691,6 +671,10 @@ img.setVisible(true);
         b.stop();
         guardarFoto();
     }//GEN-LAST:event_btnTomarActionPerformed
+
+    private void comboDispositivosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_comboDispositivosActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_comboDispositivosActionPerformed
   
     /**
      * @param args the command line arguments

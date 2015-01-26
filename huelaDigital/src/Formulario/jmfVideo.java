@@ -21,11 +21,13 @@ public class jmfVideo {
         try {
             // Se obtiene el dispositivo
             CaptureDeviceInfo device = CaptureDeviceManager.getDevice(dispositivo);
-            //se obtiene la fuente de datos de captura
+            //se btiene la fuente de datos de captura
             MediaLocator localizador = device.getLocator();
             //El localizador es del tipo "vfw://0" video para windows
             //se crea el PLAYER y se ejecuta
+            System.out.println(localizador); 
             player = Manager.createRealizedPlayer(localizador);
+           
             player.start();
         } catch (IOException ex) {
             Logger.getLogger(jmfVideo.class.getName()).log(Level.SEVERE, null, ex);

@@ -16,9 +16,9 @@ import javax.swing.JOptionPane;
 public class ConexionBD {
     public String puerto = "3306";
     public String nomServidor = "localhost";
-    public String db = "gym";
+    public String db = "huellas";
     public String user = "root";
-    public String pass = "";
+    public String pass = "root";
     Connection conn = null;
     
     public Connection conectar(){

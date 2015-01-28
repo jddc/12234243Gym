@@ -242,7 +242,8 @@ public class capturaHuella extends javax.swing.JFrame {
     
     public void guardarFoto(){
         imgFoto = b.getImagen();
-        urlFoto = "/fotosUsuarios/user_"+nombreUsuario+".jpg";
+        urlFoto = urlFoto = "C:\\Users\\joshua\\Desktop\\GYM\\fotosUsuarios\\user_"+nombreUsuario+".jpg";
+        System.out.println(urlFoto);
         try {
           ImageIO.write((RenderedImage) imgFoto, "jpg", new File(urlFoto));
           EnviarTexto("Se guardo la imagen del usuario correctamente");

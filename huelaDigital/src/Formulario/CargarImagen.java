@@ -15,6 +15,7 @@ public class CargarImagen {
 
     public CargarImagen( String ruta) {
         this.ruta = ruta;
+        System.out.println(ruta);
         this.dibujo  = new ImageIcon(new ImageIcon(getClass().getResource(ruta)).getImage());
     }
 

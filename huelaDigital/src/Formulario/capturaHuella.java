@@ -54,16 +54,18 @@ import com.github.sarxos.webcam.WebcamPanel;
 import com.github.sarxos.webcam.WebcamResolution;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.util.StringTokenizer;
 
 
 public final class capturaHuella extends javax.swing.JFrame {
    String urlFoto = "";
    String nombreUsuario = "";
+   Vector usuario; 
    
    //Variables para camaraWeb
    private Dimension ds = new Dimension(321, 268);
    private Dimension cs = WebcamResolution.VGA.getSize();
-   private Webcam wCam = Webcam.getDefault();
+   private Webcam wCam = Webcam.getWebcams().get(1); //1 logitech 0//camaraweb default
    private WebcamPanel wCamPanel = new WebcamPanel(wCam, ds, false);
    
     //Variables globales para operaciones de la huella
@@ -83,6 +85,12 @@ public final class capturaHuella extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null,"Imposible modificar el tema visual","Look and Feel invalido",
             JOptionPane.ERROR_MESSAGE);
         }
+        usuario = new Vector();
+        for (Webcam webcam : Webcam.getWebcams()) {
+System.out.println("Webcam detected: " + webcam.getName());
+}
+        
+        
        initComponents();
        wCam.setViewSize(cs);
        wCamPanel.setFillArea(true);
@@ -282,14 +290,14 @@ public final class capturaHuella extends javax.swing.JFrame {
             //Establece los valores para la sentencia SQL
             Connection c = cn.conectar();
             guardarFoto();
-            PreparedStatement guardarStmt = c.prepareStatement("INSERT INTO usuarios (nombre, huella, foto) values (?,?,?)");
-            guardarStmt.setString(1, nombreUsuario);
-            guardarStmt.setBinaryStream(2, datosHuella,sizeHuella);
-            guardarStmt.setString(3,urlFoto);
+            PreparedStatement guardarStmt = c.prepareStatement("UPDATE clientes SET huella=?, ruta_foto=? WHERE id_cliente=?");
+            guardarStmt.setString(2, urlFoto);
+            guardarStmt.setBinaryStream(1, datosHuella,sizeHuella);
+            guardarStmt.setString(3,usuario.get(0).toString());
             //Ejecuta la sentencia
             guardarStmt.execute();
             guardarStmt.close();
-            JOptionPane.showMessageDialog(null, "Huella guardada correctamente");
+            JOptionPane.showMessageDialog(null, "Huella y foto guardada correctamente");
             cn.desconectar();
             btnGuardar.setEnabled(false);
             btnVerificar.grabFocus();
@@ -303,7 +311,7 @@ public final class capturaHuella extends javax.swing.JFrame {
     public void obtenerUsuarios(){
         try {
             Connection c = cn.conectar();
-            PreparedStatement consulta = c.prepareStatement("SELECT id_cliente, nombre, a_paterno, a_materno FROM cliente");
+            PreparedStatement consulta = c.prepareStatement("SELECT id_cliente, nombre, a_paterno, a_materno FROM clientes");
             ResultSet rs = consulta.executeQuery();
             
             while(rs.next()){
@@ -318,14 +326,19 @@ public final class capturaHuella extends javax.swing.JFrame {
         }
     }
     
-    public void obtenerUsuario(int id){
+    public void obtenerUsuario(String id){
         try {
             Connection c = cn.conectar();
-            PreparedStatement consulta = c.prepareStatement("SELECT nombre, a_paterno, a_materno, edad, fecha_nac FROM cliente WHERE id_cliente=?");
-            consulta.setInt(1, id);
+            PreparedStatement consulta = c.prepareStatement("SELECT nombre, a_paterno, a_materno, edad, fecha_nac FROM clientes WHERE id_cliente=?");
+            consulta.setString(1, id);
             ResultSet rs = consulta.executeQuery();
+            //Borramos todos los items del usuario seleccionado anteriormente
+            usuario.removeAllElements();
              
             if(rs.next()){
+                usuario.addElement(id);
+                usuario.addElement(rs.getString("nombre"));
+                usuario.addElement(rs.getString("a_paterno"));
                 escribirEnUsuario("Usuario: "+rs.getString("nombre")+" "+rs.getString("a_paterno")+" "+rs.getString("a_materno"));
                 escribirEnUsuario("Edad: "+rs.getString("edad"));
                 escribirEnUsuario("Fecha de Nacimiento: "+rs.getString("fecha_nac"));
@@ -376,7 +389,7 @@ public final class capturaHuella extends javax.swing.JFrame {
     public void indentificarHuella() throws IOException{
         try {
             Connection c = cn.conectar();
-            PreparedStatement identificarSmt = c.prepareStatement("SELECT nombre,huella,foto FROM usuarios");
+            PreparedStatement identificarSmt = c.prepareStatement("SELECT nombre,huella,ruta_foto FROM clientes");
             ResultSet rs = identificarSmt.executeQuery();
          
             while(rs.next()){
@@ -384,7 +397,7 @@ public final class capturaHuella extends javax.swing.JFrame {
                 byte templateBuffer[] = rs.getBytes("huella");
                 System.out.println(templateBuffer);
                 String nombre = rs.getString("nombre");
-                urlFoto = rs.getString("foto");
+                urlFoto = rs.getString("ruta_foto");
                 System.out.println(nombre);
                 DPFPTemplate referenceTemplate = DPFPGlobal.getTemplateFactory().createTemplate(templateBuffer);
                 setTemplate(referenceTemplate);
@@ -410,16 +423,14 @@ public final class capturaHuella extends javax.swing.JFrame {
         }
     }//Termina identificarHuella
     
-    public void cargarFoto(){
+    public void cargarFoto() throws IOException{
         CargarImagen imagen = new CargarImagen(urlFoto);
+        panelFoto.removeAll();
         imagen.dibujaImagen(panelFoto.getGraphics());
+        
     }
  
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
+    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -433,7 +444,6 @@ public final class capturaHuella extends javax.swing.JFrame {
         btnSalir = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         txtStatus = new javax.swing.JTextArea();
-        comboDispositivos = new javax.swing.JComboBox();
         btnIniciar = new javax.swing.JButton();
         btnTomar = new javax.swing.JButton();
         jPanel1 = new javax.swing.JPanel();
@@ -541,12 +551,6 @@ public final class capturaHuella extends javax.swing.JFrame {
         txtStatus.setRows(5);
         jScrollPane1.setViewportView(txtStatus);
 
-        comboDispositivos.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                comboDispositivosActionPerformed(evt);
-            }
-        });
-
         btnIniciar.setText("Iniciar");
         btnIniciar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -627,10 +631,6 @@ public final class capturaHuella extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(comboDispositivos, javax.swing.GroupLayout.PREFERRED_SIZE, 220, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(104, 104, 104))
             .addGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
@@ -664,8 +664,7 @@ public final class capturaHuella extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(comboDispositivos, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(43, 43, 43)
+                        .addGap(63, 63, 63)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(btnTomar, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(btnIniciar, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -696,25 +695,7 @@ public final class capturaHuella extends javax.swing.JFrame {
        
    
     private void formWindowOpened(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowOpened
-        //CARGAMOS LIBRERIA JMF PARA MAJEJO MULTIMEDIA 
-        //LIMPIAMOS EL COMBO
-        comboDispositivos.removeAllItems();
-        //VARIABLE PARA TODOS LOS DISPOSITIVOS
-        Vector listaDispositivos = null;
-        //OBTENER TODOS LOS DISPOSITIVOS INSYTALADOS
-        listaDispositivos = CaptureDeviceManager.getDeviceList(null);
-        
-        for (int i = 0; i < listaDispositivos.size(); i++) {
-            //OBETNER INFORMACION DEL DISPOSITIVO
-            CaptureDeviceInfo info = (CaptureDeviceInfo) listaDispositivos.get(i);
-            String nombreDispositivo = info.getName().toString();
-            //SOLO DISPOSITIVOS DEL TIPO IMAGE
-             if(nombreDispositivo.indexOf("image")!= -1 || nombreDispositivo.indexOf("Image")!= -1 ){
-                 //CARGAMOS EL DISPOSITVO AL COMBO
-                 comboDispositivos.addItem(nombreDispositivo);
-             }
-        }
-        comboDispositivos.setSelectedIndex(0);
+       
         Iniciar();
         start();
         estadoHuellas();
@@ -772,28 +753,23 @@ public final class capturaHuella extends javax.swing.JFrame {
     }//GEN-LAST:event_btnIniciarActionPerformed
 
     private void btnTomarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTomarActionPerformed
-
-        /*b.capturarImagen();
-        b.stop();
-        guardarFoto();*/
         try {
             File file = new File(String.format("capture-%d.jpg", System.currentTimeMillis()));
             ImageIO.write(wCam.getImage(), "JPG", file);
-            JOptionPane.showMessageDialog(this, "Ruta de la imagen"+file.getAbsolutePath(),"CamCap",1);
+            urlFoto = file.getAbsolutePath();
+            JOptionPane.showMessageDialog(this, "Ruta de la imagen"+urlFoto,"CamCap",1);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error "+e.getMessage());
         }
     }//GEN-LAST:event_btnTomarActionPerformed
 
-    private void comboDispositivosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_comboDispositivosActionPerformed
-       
-        
-    }//GEN-LAST:event_comboDispositivosActionPerformed
-
     private void comboUsuariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_comboUsuariosActionPerformed
-        txtDatosUsuario.setText(""); 
-        int id_usuario = comboUsuarios.getSelectedIndex();
-        obtenerUsuario(id_usuario + 1);
+        txtDatosUsuario.setText("");
+        String item = comboUsuarios.getSelectedItem().toString();
+        
+        String [] campos = item.split("\\s+");
+        String id_usuario = campos[1];
+        obtenerUsuario(id_usuario);
         //Vamos a buscar al usuario y traer sus datos
         
         //escribirEnUsuario();
@@ -844,7 +820,6 @@ public final class capturaHuella extends javax.swing.JFrame {
     private javax.swing.JButton btnSalir;
     private javax.swing.JButton btnTomar;
     private javax.swing.JButton btnVerificar;
-    private javax.swing.JComboBox comboDispositivos;
     private javax.swing.JComboBox comboUsuarios;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;

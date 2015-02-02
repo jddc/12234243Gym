@@ -2,6 +2,10 @@
 package Formulario;
 
 import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 
 /**
@@ -10,20 +14,24 @@ import javax.swing.ImageIcon;
  */
 public class CargarImagen {
 
-    String ruta = "";
-    ImageIcon dibujo;
+    private BufferedImage image;
 
-    public CargarImagen( String ruta) {
-        this.ruta = ruta;
-        System.out.println(ruta);
-        this.dibujo  = new ImageIcon(new ImageIcon(getClass().getResource(ruta)).getImage());
+    public CargarImagen(String ruta) throws IOException {
+        image = ImageIO.read(new File(ruta));
+       //ImageIcon pic = new ImageIcon(imgURL); 
+        if (image != null) {
+        System.out.println(image.getSource());
+       
+        } else {
+         System.err.println("Couldn't find file: " +ruta);
+        } 
     }
 
     public CargarImagen() {
     }
     
     public void dibujaImagen(Graphics g){
-        g.drawImage(dibujo.getImage(), 10, 10, 300,240,null);
+        g.drawImage(image, 10, 10, 300,240,null);
     }
     
 }

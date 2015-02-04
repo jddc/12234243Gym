@@ -18,7 +18,7 @@ public class ConexionBD {
     public String nomServidor = "localhost";
     public String db = "gym";
     public String user = "root";
-    public String pass = "";
+    public String pass = "root";
     Connection conn = null;
     
     public Connection conectar(){

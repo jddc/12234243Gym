@@ -65,7 +65,7 @@ public final class capturaHuella extends javax.swing.JFrame {
    //Variables para camaraWeb
    private Dimension ds = new Dimension(321, 268);
    private Dimension cs = WebcamResolution.VGA.getSize();
-   private Webcam wCam = Webcam.getWebcams().get(1); //1 logitech 0//camaraweb default
+   private Webcam wCam = Webcam.getWebcams().get(0); //1 logitech 0//camaraweb default
    private WebcamPanel wCamPanel = new WebcamPanel(wCam, ds, false);
    
     //Variables globales para operaciones de la huella
@@ -87,8 +87,8 @@ public final class capturaHuella extends javax.swing.JFrame {
         }
         usuario = new Vector();
         for (Webcam webcam : Webcam.getWebcams()) {
-System.out.println("Webcam detected: " + webcam.getName());
-}
+            System.out.println("Webcam detected: " + webcam.getName());
+        }
         
         
        initComponents();
@@ -283,9 +283,9 @@ System.out.println("Webcam detected: " + webcam.getName());
         //Contiene los datos del template de la huella actual
         ByteArrayInputStream datosHuella = new ByteArrayInputStream(template.serialize());
         Integer sizeHuella = template.serialize().length;
-        
+ 
         //Pregunta el nombre de la persona a la cual correspande la huella
-        nombreUsuario = JOptionPane.showInputDialog("Nombre");
+        //nombreUsuario = JOptionPane.showInputDialog("Nombre");
         try {
             //Establece los valores para la sentencia SQL
             Connection c = cn.conectar();
@@ -297,7 +297,7 @@ System.out.println("Webcam detected: " + webcam.getName());
             //Ejecuta la sentencia
             guardarStmt.execute();
             guardarStmt.close();
-            JOptionPane.showMessageDialog(null, "Huella y foto guardada correctamente");
+            JOptionPane.showMessageDialog(null, "Huella y Foto guardada correctamente");
             cn.desconectar();
             btnGuardar.setEnabled(false);
             btnVerificar.grabFocus();
@@ -389,7 +389,7 @@ System.out.println("Webcam detected: " + webcam.getName());
     public void indentificarHuella() throws IOException{
         try {
             Connection c = cn.conectar();
-            PreparedStatement identificarSmt = c.prepareStatement("SELECT nombre,huella,ruta_foto FROM clientes");
+            PreparedStatement identificarSmt = c.prepareStatement("SELECT nombre,a_paterno,a_materno,fecha_nac,edad,huella,ruta_foto FROM clientes");
             ResultSet rs = identificarSmt.executeQuery();
          
             while(rs.next()){
@@ -408,8 +408,12 @@ System.out.println("Webcam detected: " + webcam.getName());
                 DPFPVerificationResult result = Verificador.verify(featuresVerification, getTemplate());
                 
                 if(result.isVerified()){
-                    JOptionPane.showMessageDialog(null, "La huella capturada es de "+nombre,"Identificacion huella",JOptionPane.INFORMATION_MESSAGE);
+                    //JOptionPane.showMessageDialog(null, "La huella capturada es de "+nombre,"Identificacion huella",JOptionPane.INFORMATION_MESSAGE);
                     //Cargamos la foto del usuario
+                    txtDatosUsuario.setText("");
+                    escribirEnUsuario("Usuario: "+rs.getString("nombre")+" "+rs.getString("a_paterno")+" "+rs.getString("a_materno"));
+                    escribirEnUsuario("Edad: "+rs.getString("edad"));
+                    escribirEnUsuario("Fecha de Nacimiento: "+rs.getString("fecha_nac"));
                     cargarFoto();
                     return;
                 }    
@@ -707,7 +711,7 @@ System.out.println("Webcam detected: " + webcam.getName());
     }//GEN-LAST:event_formWindowOpened
 
     private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGuardarActionPerformed
-        // TODO add your handling code here:
+
         try {
             guardarHuella();
             Reclutador.clear();

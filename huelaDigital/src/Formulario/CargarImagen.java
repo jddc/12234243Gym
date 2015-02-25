@@ -30,8 +30,8 @@ public class CargarImagen {
     public CargarImagen() {
     }
     
-    public void dibujaImagen(Graphics g){
-        g.drawImage(image, 10, 10, 300,240,null);
+    public void dibujaImagen(Graphics g, int width, int height){
+        g.drawImage(image, 10, 10, width,height,null);
     }
     
 }

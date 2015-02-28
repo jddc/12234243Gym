@@ -59,6 +59,7 @@ import java.util.StringTokenizer;
 
 public final class capturaHuella extends javax.swing.JFrame {
    String urlFoto = "";
+   String Foto = "";
    String nombreUsuario = "";
    Vector usuario; 
    
@@ -290,10 +291,11 @@ public final class capturaHuella extends javax.swing.JFrame {
             //Establece los valores para la sentencia SQL
             Connection c = cn.conectar();
             guardarFoto();
-            PreparedStatement guardarStmt = c.prepareStatement("UPDATE customers SET fingerprint=?, photo_route=? WHERE id=?");
-            guardarStmt.setString(2, urlFoto);
+            PreparedStatement guardarStmt = c.prepareStatement("UPDATE customers SET fingerprint=?, abs_photo_route=?, photo=? WHERE id=?");
             guardarStmt.setBinaryStream(1, datosHuella,sizeHuella);
-            guardarStmt.setString(3,usuario.get(0).toString());
+            guardarStmt.setString(2, urlFoto);
+            guardarStmt.setString(3, Foto);
+            guardarStmt.setString(4,usuario.get(0).toString());
             //Ejecuta la sentencia
             guardarStmt.execute();
             guardarStmt.close();
@@ -311,7 +313,7 @@ public final class capturaHuella extends javax.swing.JFrame {
     public void obtenerUsuarios(){
         try {
             Connection c = cn.conectar();
-            PreparedStatement consulta = c.prepareStatement("SELECT id, name, last_name  FROM customers where photo_route = \"\" order by id desc limit 10");
+            PreparedStatement consulta = c.prepareStatement("SELECT id, name, last_name  FROM customers where abs_photo_route = \"\" order by id desc limit 10");
             ResultSet rs = consulta.executeQuery();
             
             while(rs.next()){
@@ -391,7 +393,7 @@ public final class capturaHuella extends javax.swing.JFrame {
     public void indentificarHuella() throws IOException{
         try {
             Connection c = cn.conectar();
-            PreparedStatement identificarSmt = c.prepareStatement("SELECT name,last_name,birthday,age,fingerprint,photo_route FROM customers");
+            PreparedStatement identificarSmt = c.prepareStatement("SELECT name,last_name,birthday,age,fingerprint,abs_photo_route FROM customers");
             ResultSet rs = identificarSmt.executeQuery();
          
             while(rs.next()){
@@ -399,7 +401,7 @@ public final class capturaHuella extends javax.swing.JFrame {
                 byte templateBuffer[] = rs.getBytes("fingerprint");
                 System.out.println(templateBuffer);
                 String nombre = rs.getString("name");
-                urlFoto = rs.getString("photo_route");
+                urlFoto = rs.getString("abs_photo_route");
                 System.out.println(nombre);
                 DPFPTemplate referenceTemplate = DPFPGlobal.getTemplateFactory().createTemplate(templateBuffer);
                 setTemplate(referenceTemplate);
@@ -764,9 +766,13 @@ public final class capturaHuella extends javax.swing.JFrame {
 
     private void btnTomarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTomarActionPerformed
         try {
-            File file = new File(String.format("capture-%d.jpg", System.currentTimeMillis()));
+            Foto = String.format("capture-%d.jpg", System.currentTimeMillis());
+            File file = new File("C:\\Users\\joshua\\Documents\\Desarrollo\\gym\\public\\customerPhotos\\"+Foto);
+            File respaldo = new File("C:\\Users\\joshua\\Desktop\\fotosUsuarios\\"+Foto);
+
             ImageIO.write(wCam.getImage(), "JPG", file);
-            urlFoto = file.getAbsolutePath();
+            ImageIO.write(wCam.getImage(), "JPG", respaldo);
+            urlFoto = respaldo.getAbsoluteFile().toString();
             JOptionPane.showMessageDialog(this, "Ruta de la imagen"+urlFoto,"CamCap",1);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error "+e.getMessage());

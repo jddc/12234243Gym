@@ -297,7 +297,7 @@ public final class controAcceso extends javax.swing.JFrame {
             //Establece los valores para la sentencia SQL
             Connection c = cn.conectar();
             guardarFoto();
-            PreparedStatement guardarStmt = c.prepareStatement("UPDATE customers SET fingerprint=?, photo_route=? WHERE id=?");
+            PreparedStatement guardarStmt = c.prepareStatement("UPDATE customers SET fingerprint=?, abs_photo_route=? WHERE id=?");
             guardarStmt.setString(2, urlFoto);
             guardarStmt.setBinaryStream(1, datosHuella,sizeHuella);
             guardarStmt.setString(3,usuario.get(0).toString());
@@ -318,7 +318,7 @@ public final class controAcceso extends javax.swing.JFrame {
     public void obtenerUsuarios(){
         try {
             Connection c = cn.conectar();
-            PreparedStatement consulta = c.prepareStatement("SELECT id, name, last_name  FROM customers where photo_route = \"\" order by id desc limit 10");
+            PreparedStatement consulta = c.prepareStatement("SELECT id, name, last_name  FROM customers where abs_photo_route = \"\" order by id desc limit 10");
             ResultSet rs = consulta.executeQuery();
             
             while(rs.next()){
@@ -398,7 +398,7 @@ public final class controAcceso extends javax.swing.JFrame {
     public void indentificarHuella() throws IOException{
         try {
             Connection c = cn.conectar();
-            PreparedStatement identificarSmt = c.prepareStatement("SELECT name,last_name,birthday,age,fingerprint,photo_route FROM customers");
+            PreparedStatement identificarSmt = c.prepareStatement("SELECT name,last_name,birthday,age,fingerprint,abs_photo_route FROM customers");
             ResultSet rs = identificarSmt.executeQuery();
          
             while(rs.next()){
@@ -597,7 +597,7 @@ public final class controAcceso extends javax.swing.JFrame {
                         .addGap(22, 22, 22))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(83, 83, 83)))
+                        .addGap(95, 95, 95)))
                 .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(137, Short.MAX_VALUE))
         );

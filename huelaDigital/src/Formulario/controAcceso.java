@@ -337,7 +337,7 @@ public final class controAcceso extends javax.swing.JFrame {
     public void obtenerUsuario(String id){
         try {
             Connection c = cn.conectar();
-            PreparedStatement consulta = c.prepareStatement("SELECT name,last_name, age, birthday, signup_date FROM customers WHERE id=?");
+            PreparedStatement consulta = c.prepareStatement("SELECT name,last_name, age, birthday, created_at FROM customers WHERE id=?");
             consulta.setString(1, id);
             ResultSet rs = consulta.executeQuery();
             //Borramos todos los items del usuario seleccionado anteriormente
@@ -350,7 +350,7 @@ public final class controAcceso extends javax.swing.JFrame {
                 escribirEnUsuario("Usuario: "+rs.getString("name")+" "+rs.getString("last_name"));
                 escribirEnUsuario("Edad: "+rs.getString("age"));
                 escribirEnUsuario("Fecha de Nacimiento: "+rs.getString("birthday"));
-                escribirEnUsuario("Fecha de Incripcion: "+rs.getString("signup_date"));
+                escribirEnUsuario("Fecha de Incripcion: "+rs.getString("created_at"));
             }
         } catch (SQLException e) {
              System.err.println("Error al incluir a los usuarios en el checkbox: "+e.getMessage());
@@ -398,15 +398,17 @@ public final class controAcceso extends javax.swing.JFrame {
     public void indentificarHuella() throws IOException{
         try {
             Connection c = cn.conectar();
-            PreparedStatement identificarSmt = c.prepareStatement("SELECT name,last_name,birthday,age,fingerprint,abs_photo_route FROM customers");
+            PreparedStatement identificarSmt = c.prepareStatement("SELECT id,name,last_name,birthday,age,fingerprint,abs_photo_route FROM customers");
             ResultSet rs = identificarSmt.executeQuery();
          
             while(rs.next()){
                 //Lee la plantilla de la base de datos
                 byte templateBuffer[] = rs.getBytes("fingerprint");
                 System.out.println(templateBuffer);
+                int id_customer = rs.getInt("id");
                 String nombre = rs.getString("name");
-                urlFoto = rs.getString("photo_route");
+                String apellidos = rs.getString("last_name");
+                urlFoto = rs.getString("abs_photo_route");
                 System.out.println(nombre);
                 DPFPTemplate referenceTemplate = DPFPGlobal.getTemplateFactory().createTemplate(templateBuffer);
                 setTemplate(referenceTemplate);
@@ -425,6 +427,8 @@ public final class controAcceso extends javax.swing.JFrame {
                     escribirEnUsuario("Fecha de Nacimiento: "+rs.getString("birthday"));
                     //Cargamos la foto del usuario
                     cargarFoto();
+                    //Registramos asistencia del cliente
+                    registrarAsistencia(id_customer,nombre,apellidos );
                     return;
                 }    
             }
@@ -436,6 +440,21 @@ public final class controAcceso extends javax.swing.JFrame {
             cn.desconectar();
         }
     }//Termina identificarHuella
+    
+    public void registrarAsistencia(int id,String name, String last_name){
+        try {
+            Connection c = cn.conectar();
+            PreparedStatement ps = c.prepareStatement("INSERT INTO assistance (id_customer,customer_name,customer_last_name) VALUES (?,?,?)");
+            ps.setInt(1,id);
+            ps.setString(2, name);
+            ps.setString(3, last_name);
+            ps.executeUpdate();
+        }catch (SQLException e) {
+            System.err.println("Error al registrar la asistencia del usuario"+e.getMessage());
+        }finally{
+            cn.desconectar();
+        }
+    }//Termina registrarAsistencia
     
     public void cargarFoto() throws IOException{
         //Hacemos una instancia de la clase CargarImagen para cargar la foto del usuario en el jPanel

@@ -20,8 +20,13 @@ import com.digitalpersona.onetouch.processing.DPFPFeatureExtraction;
 import com.digitalpersona.onetouch.processing.DPFPImageQualityException;
 import com.digitalpersona.onetouch.verification.DPFPVerification;
 import com.digitalpersona.onetouch.verification.DPFPVerificationResult;
+import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.WebcamPanel;
+import com.github.sarxos.webcam.WebcamResolution;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -33,7 +38,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.StringTokenizer;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,12 +56,6 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
-import com.github.sarxos.webcam.Webcam;
-import com.github.sarxos.webcam.WebcamPanel;
-import com.github.sarxos.webcam.WebcamResolution;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.util.StringTokenizer;
 
 
 public final class controAcceso extends javax.swing.JFrame {
@@ -444,10 +445,16 @@ public final class controAcceso extends javax.swing.JFrame {
     public void registrarAsistencia(int id,String name, String last_name){
         try {
             Connection c = cn.conectar();
-            PreparedStatement ps = c.prepareStatement("INSERT INTO assistance (id_customer,customer_name,customer_last_name) VALUES (?,?,?)");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-M-dd");
+            SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm:ss");
+	    String date = sdf.format(new Date());
+            String time = sdf2.format(new Date());
+            PreparedStatement ps = c.prepareStatement("INSERT INTO assistance (id_customer,customer_name,customer_last_name,date,time) VALUES (?,?,?,?,?)");
             ps.setInt(1,id);
             ps.setString(2, name);
             ps.setString(3, last_name);
+            ps.setString(4, date);
+            ps.setString(5, time);
             ps.executeUpdate();
         }catch (SQLException e) {
             System.err.println("Error al registrar la asistencia del usuario"+e.getMessage());

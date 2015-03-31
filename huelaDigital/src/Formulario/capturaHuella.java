@@ -332,7 +332,7 @@ public final class capturaHuella extends javax.swing.JFrame {
     public void obtenerUsuario(String id){
         try {
             Connection c = cn.conectar();
-            PreparedStatement consulta = c.prepareStatement("SELECT name,last_name, age, birthday, signup_date FROM customers WHERE id=?");
+            PreparedStatement consulta = c.prepareStatement("SELECT name,last_name, age, birthday FROM customers WHERE id=?");
             consulta.setString(1, id);
             ResultSet rs = consulta.executeQuery();
             //Borramos todos los items del usuario seleccionado anteriormente
@@ -345,7 +345,7 @@ public final class capturaHuella extends javax.swing.JFrame {
                 escribirEnUsuario("Usuario: "+rs.getString("name")+" "+rs.getString("last_name"));
                 escribirEnUsuario("Edad: "+rs.getString("age"));
                 escribirEnUsuario("Fecha de Nacimiento: "+rs.getString("birthday"));
-                escribirEnUsuario("Fecha de Incripcion: "+rs.getString("signup_date"));
+                //escribirEnUsuario("Fecha de Incripcion: "+rs.getString("signup_date"));
             }
         } catch (SQLException e) {
              System.err.println("Error al incluir a los usuarios en el checkbox: "+e.getMessage());
@@ -353,6 +353,8 @@ public final class capturaHuella extends javax.swing.JFrame {
             cn.desconectar();
         }
     }
+    
+   
     
     public void verificarHuella(String nombre){
         try {

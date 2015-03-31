@@ -23,12 +23,15 @@ import com.digitalpersona.onetouch.verification.DPFPVerificationResult;
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
 import com.github.sarxos.webcam.WebcamResolution;
+
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.ByteArrayInputStream;
@@ -38,8 +41,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.StringTokenizer;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -50,12 +56,15 @@ import javax.media.CaptureDeviceManager;
 import javax.media.Manager;
 import javax.media.MediaLocator;
 import javax.media.Player;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
+
 
 
 public final class controAcceso extends javax.swing.JFrame {
@@ -202,6 +211,12 @@ public final class controAcceso extends javax.swing.JFrame {
         txtDatosUsuario.append(string+ "\n");
     }
     
+     public void escribirAlerta(String string){
+        txtAlertas.append(string+ "\n");
+        
+        
+    }
+    
     
    
     public void start(){
@@ -343,6 +358,7 @@ public final class controAcceso extends javax.swing.JFrame {
             ResultSet rs = consulta.executeQuery();
             //Borramos todos los items del usuario seleccionado anteriormente
             usuario.removeAllElements();
+            txtAlertas.removeAll();
              
             if(rs.next()){
                 usuario.addElement(id);
@@ -426,10 +442,16 @@ public final class controAcceso extends javax.swing.JFrame {
                     escribirEnUsuario("Usuario: "+rs.getString("name")+" "+rs.getString("last_name"));
                     escribirEnUsuario("Edad: "+rs.getString("age"));
                     escribirEnUsuario("Fecha de Nacimiento: "+rs.getString("birthday"));
+                    //Buscamos si el cliente tiene que pagar
+                    
                     //Cargamos la foto del usuario
                     cargarFoto();
+                    //Buscamos lor cargos del cliente
+                     alertaPagos(id_customer);
                     //Registramos asistencia del cliente
                     registrarAsistencia(id_customer,nombre,apellidos );
+                    
+                    //semaforo(false,false,true);
                     return;
                 }    
             }
@@ -441,6 +463,133 @@ public final class controAcceso extends javax.swing.JFrame {
             cn.desconectar();
         }
     }//Termina identificarHuella
+    
+    public void alertaPagos(int id_customer){
+        String pagado;
+        boolean stop = false;
+        DateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar calendario = GregorianCalendar.getInstance();
+        Date fechaActual = new Date();
+        try {
+            Connection c = cn.conectar();
+            PreparedStatement buscarSmt = c.prepareStatement("SELECT type,amount,payment_date,next_payment_date,current_payment FROM customer_payment WHERE customer_id= ?");
+            buscarSmt.setInt(1, id_customer);
+            ResultSet rs = buscarSmt.executeQuery();
+            
+            while(rs.next()){
+                String tipoPago = rs.getString("type");
+                String monto = rs.getString("amount");
+                Date fechaPagoAnterior = rs.getDate("payment_date");
+                Date proxFechaPago = rs.getDate("next_payment_date");
+                int actualPagado = rs.getInt("current_payment");
+                
+                 switch(tipoPago){
+                       case "inscription":
+                           tipoPago = "Inscripcion";
+                        break;
+                        case "annuity":
+                           tipoPago = "Anualidad";
+                        break;
+                        case "recurrent":
+                           tipoPago = "Recurrente";
+                        break;
+                        case "unique":
+                           tipoPago = "Promocional";
+                        break;
+                             
+                   }
+                //System.err.println(formatoFecha.format(calendario.getTime())+ " " +formatoFecha.format(proxFechaPago));
+                
+                //Verificamos si faltan 3 dias para su fecha de pago
+                String proxFecha = sumarRestarDiasFecha(proxFechaPago, -3);
+                 //System.err.println("Prox fecha"+proxFecha);
+                if(proxFecha.equals( formatoFecha.format(calendario.getTime()) )){
+                    if(!stop)
+                        semaforo(false,true,false);
+                   escribirAlerta("Faltan 3 dias para pagar "+tipoPago);
+                   // JOptionPane.showMessageDialog(null, "Faltan 3 dias para pagar "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
+                }
+                
+                proxFecha = sumarRestarDiasFecha(proxFechaPago, -2);
+                if(proxFecha.equals( formatoFecha.format(calendario.getTime()) )){
+                  if(!stop)
+                    semaforo(false,true,false);
+                    
+                  escribirAlerta("Faltan 2 dias para pagar "+tipoPago);
+                    //JOptionPane.showMessageDialog(null, "Faltan  2 dias para pagar "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
+                }
+                
+                proxFecha = sumarRestarDiasFecha(proxFechaPago, -1);
+                if(proxFecha.equals( formatoFecha.format(calendario.getTime()) )){
+                    if(!stop)
+                        semaforo(false,true,false);
+                    
+                    escribirAlerta("Falta 1 dia para pagar "+tipoPago);
+                    //JOptionPane.showMessageDialog(null, "Faltan  1 dia para pagar "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
+                }
+                
+                if(actualPagado == 0 || (formatoFecha.format(calendario.getTime())).equals(formatoFecha.format(proxFechaPago)) ){
+                  
+                   escribirEnUsuario("Tipo de pago: "+tipoPago+" $"+monto);
+                   escribirEnUsuario("Fecha ultimo pago: "+fechaPagoAnterior);
+                   escribirEnUsuario("Status: Sin pagar"); 
+                   escribirEnUsuario("Fecha prox pago: "+proxFechaPago);
+                   
+                   //Reproduccion del sonido de alarma
+                   try {
+                        Clip sonido = AudioSystem.getClip();
+                        File a = new File("C:\\Users\\joshua\\Music\\sound_alarma.wav");
+                        sonido.open(AudioSystem.getAudioInputStream(a));
+                        sonido.start();
+                        System.out.println("Reproduciendo 3s. de sonido...");
+                        Thread.sleep(500); // 1000 milisegundos (10 segundos)
+                        sonido.close();
+                        }
+                        catch (Exception tipoerror) {
+                        System.out.println("Error al reproducir la alarma" + tipoerror);
+                    }
+                   
+                   escribirAlerta("No has realizado tu pago tipo "+tipoPago);
+                   stop = true;
+                   semaforo(false,false,true);
+                   JOptionPane.showMessageDialog(null, "No has realizado tu pago tipo "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
+                  
+                }
+                
+            }
+           
+        }catch (SQLException e) {
+            System.err.println("Error al buscar en los pagos del cliente "+e.getMessage());
+        }finally{
+            cn.desconectar();
+        }
+    }//Termina Alerta Pagos
+    
+    
+    public String sumarRestarDiasFecha(Date fecha, int dias){		
+      Calendar calendar = Calendar.getInstance();
+      DateFormat formato = new SimpleDateFormat("yyyy-MM-dd");
+      calendar.setTime(fecha); // Configuramos la fecha que se recibe
+      calendar.add(Calendar.DAY_OF_YEAR, dias);  // numero de días a añadir, o restar en caso de días<0
+     return formato.format(calendar.getTime()); // Devuelve el objeto Date con los nuevos días añadidos	
+    }
+    
+    public void semaforo(boolean verde,boolean amarillo,boolean rojo){
+        semaVerde.setBackground(Color.black);
+        semaAmarillo.setBackground(Color.black);
+        semaRojo.setBackground(Color.black);
+        
+       if(verde)
+           semaVerde.setBackground(Color.black);
+       if(amarillo)
+           semaAmarillo.setBackground(Color.yellow);
+       if(rojo)
+           semaRojo.setBackground(Color.red);
+       
+       
+    }
+    
+    
     
     public void registrarAsistencia(int id,String name, String last_name){
         try {
@@ -487,6 +636,13 @@ public final class controAcceso extends javax.swing.JFrame {
         jScrollPane2 = new javax.swing.JScrollPane();
         txtDatosUsuario = new javax.swing.JTextArea();
         btnSalir = new javax.swing.JButton();
+        jPanel3 = new javax.swing.JPanel();
+        semaVerde = new javax.swing.JPanel();
+        semaAmarillo = new javax.swing.JPanel();
+        semaRojo = new javax.swing.JPanel();
+        jPanel5 = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        txtAlertas = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Toma de foto y huella digital");
@@ -510,15 +666,14 @@ public final class controAcceso extends javax.swing.JFrame {
             PanHueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(PanHueLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(lblHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 173, Short.MAX_VALUE)
+                .addComponent(lblHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 131, Short.MAX_VALUE)
                 .addContainerGap())
         );
         PanHueLayout.setVerticalGroup(
             PanHueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, PanHueLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(PanHueLayout.createSequentialGroup()
                 .addComponent(lblHuella, javax.swing.GroupLayout.PREFERRED_SIZE, 206, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
+                .addGap(0, 8, Short.MAX_VALUE))
         );
 
         txtStatus.setColumns(20);
@@ -576,8 +731,8 @@ public final class controAcceso extends javax.swing.JFrame {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 251, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(12, Short.MAX_VALUE))
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 105, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(19, Short.MAX_VALUE))
         );
 
         btnSalir.setText("Salir");
@@ -587,6 +742,98 @@ public final class controAcceso extends javax.swing.JFrame {
             }
         });
 
+        jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED), "Semaforo"));
+
+        semaVerde.setBackground(new java.awt.Color(0, 0, 0));
+        semaVerde.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
+
+        javax.swing.GroupLayout semaVerdeLayout = new javax.swing.GroupLayout(semaVerde);
+        semaVerde.setLayout(semaVerdeLayout);
+        semaVerdeLayout.setHorizontalGroup(
+            semaVerdeLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 131, Short.MAX_VALUE)
+        );
+        semaVerdeLayout.setVerticalGroup(
+            semaVerdeLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 99, Short.MAX_VALUE)
+        );
+
+        semaAmarillo.setBackground(new java.awt.Color(0, 0, 0));
+        semaAmarillo.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
+
+        javax.swing.GroupLayout semaAmarilloLayout = new javax.swing.GroupLayout(semaAmarillo);
+        semaAmarillo.setLayout(semaAmarilloLayout);
+        semaAmarilloLayout.setHorizontalGroup(
+            semaAmarilloLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 131, Short.MAX_VALUE)
+        );
+        semaAmarilloLayout.setVerticalGroup(
+            semaAmarilloLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 99, Short.MAX_VALUE)
+        );
+
+        semaRojo.setBackground(new java.awt.Color(0, 0, 0));
+        semaRojo.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.RAISED));
+
+        javax.swing.GroupLayout semaRojoLayout = new javax.swing.GroupLayout(semaRojo);
+        semaRojo.setLayout(semaRojoLayout);
+        semaRojoLayout.setHorizontalGroup(
+            semaRojoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 131, Short.MAX_VALUE)
+        );
+        semaRojoLayout.setVerticalGroup(
+            semaRojoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 99, Short.MAX_VALUE)
+        );
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addGap(34, 34, 34)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(semaRojo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(semaAmarillo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(semaVerde, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(39, Short.MAX_VALUE))
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(semaVerde, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(semaAmarillo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(semaRojo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder("Alertas"));
+
+        txtAlertas.setColumns(20);
+        txtAlertas.setFont(new java.awt.Font("Arial", 1, 18)); // NOI18N
+        txtAlertas.setForeground(new java.awt.Color(255, 0, 0));
+        txtAlertas.setRows(5);
+        jScrollPane3.setViewportView(txtAlertas);
+
+        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
+        jPanel5.setLayout(jPanel5Layout);
+        jPanel5Layout.setHorizontalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane3)
+                .addContainerGap())
+        );
+        jPanel5Layout.setVerticalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 119, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -595,37 +842,44 @@ public final class controAcceso extends javax.swing.JFrame {
                 .addGap(22, 22, 22)
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 10, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(102, 102, 102)
-                        .addComponent(PanHue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(78, 78, 78)
-                        .addComponent(jScrollPane1))
+                        .addGap(123, 123, 123)
+                        .addComponent(PanHue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(28, 28, 28))
+                        .addGap(31, 31, 31)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 356, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 78, Short.MAX_VALUE)
+                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(47, 47, 47)
+                .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(19, 19, 19))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(PanHue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(22, 22, 22))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(95, 95, 95)))
-                .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(137, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane1))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(22, Short.MAX_VALUE))
         );
 
         pack();
@@ -701,10 +955,17 @@ public final class controAcceso extends javax.swing.JFrame {
     private javax.swing.JButton btnSalir;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JLabel lblHuella;
     private javax.swing.JPanel panelFoto;
+    private javax.swing.JPanel semaAmarillo;
+    private javax.swing.JPanel semaRojo;
+    private javax.swing.JPanel semaVerde;
+    private javax.swing.JTextArea txtAlertas;
     private javax.swing.JTextArea txtDatosUsuario;
     private javax.swing.JTextArea txtStatus;
     // End of variables declaration//GEN-END:variables

@@ -70,7 +70,8 @@ import javax.swing.border.Border;
 public final class controAcceso extends javax.swing.JFrame {
    String urlFoto = "";
    String nombreUsuario = "";
-   Vector usuario; 
+   Vector usuario;
+    boolean stop = false;
    
    //Variables para camaraWeb
    private Dimension ds = new Dimension(321, 268);
@@ -358,7 +359,8 @@ public final class controAcceso extends javax.swing.JFrame {
             ResultSet rs = consulta.executeQuery();
             //Borramos todos los items del usuario seleccionado anteriormente
             usuario.removeAllElements();
-            txtAlertas.removeAll();
+            txtAlertas.setText(null);
+            
              
             if(rs.next()){
                 usuario.addElement(id);
@@ -417,6 +419,8 @@ public final class controAcceso extends javax.swing.JFrame {
             Connection c = cn.conectar();
             PreparedStatement identificarSmt = c.prepareStatement("SELECT id,name,last_name,birthday,age,fingerprint,abs_photo_route FROM customers");
             ResultSet rs = identificarSmt.executeQuery();
+            txtDatosUsuario.setText(null);
+            txtAlertas.setText(null);
          
             while(rs.next()){
                 //Lee la plantilla de la base de datos
@@ -450,8 +454,8 @@ public final class controAcceso extends javax.swing.JFrame {
                      alertaPagos(id_customer);
                     //Registramos asistencia del cliente
                     registrarAsistencia(id_customer,nombre,apellidos );
-                    
-                    //semaforo(false,false,true);
+                    if(!stop)
+                        semaforo(true,false,false);
                     return;
                 }    
             }
@@ -466,7 +470,7 @@ public final class controAcceso extends javax.swing.JFrame {
     
     public void alertaPagos(int id_customer){
         String pagado;
-        boolean stop = false;
+       
         DateFormat formatoFecha = new SimpleDateFormat("yyyy-MM-dd");
         Calendar calendario = GregorianCalendar.getInstance();
         Date fechaActual = new Date();
@@ -485,28 +489,28 @@ public final class controAcceso extends javax.swing.JFrame {
                 
                  switch(tipoPago){
                        case "inscription":
-                           tipoPago = "Inscripcion";
+                           tipoPago = "inscripcion";
                         break;
                         case "annuity":
-                           tipoPago = "Anualidad";
+                           tipoPago = "anualidad";
                         break;
                         case "recurrent":
-                           tipoPago = "Recurrente";
+                           tipoPago = "recurrente";
                         break;
                         case "unique":
-                           tipoPago = "Promocional";
+                           tipoPago = "promocional";
                         break;
                              
                    }
                 //System.err.println(formatoFecha.format(calendario.getTime())+ " " +formatoFecha.format(proxFechaPago));
-                
+            //Caso 1) Avisamos que ya falta poco tiempo para pagar    
                 //Verificamos si faltan 3 dias para su fecha de pago
                 String proxFecha = sumarRestarDiasFecha(proxFechaPago, -3);
                  //System.err.println("Prox fecha"+proxFecha);
                 if(proxFecha.equals( formatoFecha.format(calendario.getTime()) )){
                     if(!stop)
                         semaforo(false,true,false);
-                   escribirAlerta("Faltan 3 dias para pagar "+tipoPago);
+                   escribirAlerta("Faltan 3 dias para tu pago: "+tipoPago);
                    // JOptionPane.showMessageDialog(null, "Faltan 3 dias para pagar "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
                 }
                 
@@ -515,7 +519,7 @@ public final class controAcceso extends javax.swing.JFrame {
                   if(!stop)
                     semaforo(false,true,false);
                     
-                  escribirAlerta("Faltan 2 dias para pagar "+tipoPago);
+                  escribirAlerta("Faltan 2 dias para tu pago: "+tipoPago);
                     //JOptionPane.showMessageDialog(null, "Faltan  2 dias para pagar "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
                 }
                 
@@ -524,37 +528,38 @@ public final class controAcceso extends javax.swing.JFrame {
                     if(!stop)
                         semaforo(false,true,false);
                     
-                    escribirAlerta("Falta 1 dia para pagar "+tipoPago);
+                    escribirAlerta("Falta 1 dia para para tu pago: "+tipoPago);
                     //JOptionPane.showMessageDialog(null, "Faltan  1 dia para pagar "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
                 }
                 
-                if(actualPagado == 0 || (formatoFecha.format(calendario.getTime())).equals(formatoFecha.format(proxFechaPago)) ){
-                  
+                
+                
+                //Caso 2) El mismo dia caduca su cargo
+                if( (formatoFecha.format(calendario.getTime())).equals(formatoFecha.format(proxFechaPago)) ){
                    escribirEnUsuario("Tipo de pago: "+tipoPago+" $"+monto);
                    escribirEnUsuario("Fecha ultimo pago: "+fechaPagoAnterior);
                    escribirEnUsuario("Status: Sin pagar"); 
-                   escribirEnUsuario("Fecha prox pago: "+proxFechaPago);
-                   
-                   //Reproduccion del sonido de alarma
-                   try {
-                        Clip sonido = AudioSystem.getClip();
-                        File a = new File("C:\\Users\\joshua\\Music\\sound_alarma.wav");
-                        sonido.open(AudioSystem.getAudioInputStream(a));
-                        sonido.start();
-                        System.out.println("Reproduciendo 3s. de sonido...");
-                        Thread.sleep(500); // 1000 milisegundos (10 segundos)
-                        sonido.close();
-                        }
-                        catch (Exception tipoerror) {
-                        System.out.println("Error al reproducir la alarma" + tipoerror);
-                    }
-                   
+                   escribirEnUsuario("Fecha prox pago: "+proxFechaPago); 
                    escribirAlerta("No has realizado tu pago tipo "+tipoPago);
-                   stop = true;
+                   sonarAlarma();
+                   //Ponemos el semaforo en Rojo
                    semaforo(false,false,true);
                    JOptionPane.showMessageDialog(null, "No has realizado tu pago tipo "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
-                  
                 }
+                
+                //Caso 3) Se paso su fecha de pago
+                if(calendario.getTime().after(proxFechaPago)){
+                   escribirEnUsuario("Tipo de pago: "+tipoPago+" $"+monto);
+                   escribirEnUsuario("Fecha ultimo pago: "+fechaPagoAnterior);
+                   escribirEnUsuario("Status: Sin pagar"); 
+                   escribirEnUsuario("Fecha prox pago: "+proxFechaPago);  
+                   escribirAlerta("No has realizado tu pago tipo "+tipoPago);
+                   sonarAlarma();
+                   //Ponemos el semaforo en Rojo
+                   semaforo(false,false,true);
+                   JOptionPane.showMessageDialog(null, "No has realizado tu pago tipo "+tipoPago,"Alerta de Pagos",JOptionPane.ERROR_MESSAGE);
+                }
+                
                 
             }
            
@@ -564,6 +569,23 @@ public final class controAcceso extends javax.swing.JFrame {
             cn.desconectar();
         }
     }//Termina Alerta Pagos
+    
+    
+    public void sonarAlarma(){
+       //Reproduccion del sonido de alarma
+        try {
+             Clip sonido = AudioSystem.getClip();
+             File a = new File("C:\\Users\\joshua\\Music\\sound_alarma.wav");
+             sonido.open(AudioSystem.getAudioInputStream(a));
+             sonido.start();
+             System.out.println("Reproduciendo 3s. de sonido...");
+             Thread.sleep(500); // 1000 milisegundos (10 segundos)
+             sonido.close();
+             }
+             catch (Exception tipoerror) {
+             System.out.println("Error al reproducir la alarma" + tipoerror);
+         } 
+    }
     
     
     public String sumarRestarDiasFecha(Date fecha, int dias){		
@@ -579,12 +601,21 @@ public final class controAcceso extends javax.swing.JFrame {
         semaAmarillo.setBackground(Color.black);
         semaRojo.setBackground(Color.black);
         
-       if(verde)
-           semaVerde.setBackground(Color.black);
-       if(amarillo)
+       if(verde){
+           semaVerde.setBackground(Color.green);
+           stop = false;
+       }
+           
+       if(amarillo){
            semaAmarillo.setBackground(Color.yellow);
-       if(rojo)
+           stop = true;
+       }
+           
+       if(rojo){
            semaRojo.setBackground(Color.red);
+           stop = true;
+       }
+           
        
        
     }
@@ -664,19 +695,15 @@ public final class controAcceso extends javax.swing.JFrame {
         PanHue.setLayout(PanHueLayout);
         PanHueLayout.setHorizontalGroup(
             PanHueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(PanHueLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(lblHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 131, Short.MAX_VALUE)
-                .addContainerGap())
+            .addComponent(lblHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE)
         );
         PanHueLayout.setVerticalGroup(
             PanHueLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(PanHueLayout.createSequentialGroup()
-                .addComponent(lblHuella, javax.swing.GroupLayout.PREFERRED_SIZE, 206, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 8, Short.MAX_VALUE))
+            .addComponent(lblHuella, javax.swing.GroupLayout.DEFAULT_SIZE, 214, Short.MAX_VALUE)
         );
 
         txtStatus.setColumns(20);
+        txtStatus.setFont(new java.awt.Font("Arial", 0, 10)); // NOI18N
         txtStatus.setRows(5);
         jScrollPane1.setViewportView(txtStatus);
 
@@ -715,6 +742,7 @@ public final class controAcceso extends javax.swing.JFrame {
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(javax.swing.BorderFactory.createEtchedBorder(), "Datos usuario"));
 
         txtDatosUsuario.setColumns(20);
+        txtDatosUsuario.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         txtDatosUsuario.setRows(5);
         jScrollPane2.setViewportView(txtDatosUsuario);
 
@@ -813,7 +841,7 @@ public final class controAcceso extends javax.swing.JFrame {
         jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder("Alertas"));
 
         txtAlertas.setColumns(20);
-        txtAlertas.setFont(new java.awt.Font("Arial", 1, 18)); // NOI18N
+        txtAlertas.setFont(new java.awt.Font("Arial", 1, 14)); // NOI18N
         txtAlertas.setForeground(new java.awt.Color(255, 0, 0));
         txtAlertas.setRows(5);
         jScrollPane3.setViewportView(txtAlertas);

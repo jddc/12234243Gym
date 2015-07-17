@@ -15,10 +15,10 @@ import javax.swing.JOptionPane;
 //Conexion BD Huellas MySQL
 public class ConexionBD {
     public String puerto = "3306";
-    public String nomServidor = "localhost";
+    public String nomServidor = "45.55.251.124";
     public String db = "gym";
-    public String user = "root";
-    public String pass = "root";
+    public String user = "userGymtech";
+    public String pass = "User&gymTech";
     Connection conn = null;
     
     public Connection conectar(){

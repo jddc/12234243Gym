@@ -71,7 +71,10 @@ public final class capturaHuellaRemoto extends javax.swing.JFrame {
    //Variables para camaraWeb
    private Dimension ds = new Dimension(321, 268);
    private Dimension cs = WebcamResolution.VGA.getSize();
-   private Webcam wCam = Webcam.getWebcams().get(0); //1 logitech 0//camaraweb default
+   //private Webcam wCam = Webcam.getWebcams().get(0); //1 logitech 0//camaraweb default
+   //private Webcam wCam = Webcam.getDefault();
+   //private WebcamPanel wCamPanel = new WebcamPanel(wCam, ds, false);
+   private Webcam wCam = Webcam.getDefault();
    private WebcamPanel wCamPanel = new WebcamPanel(wCam, ds, false);
    
     //Variables globales para operaciones de la huella
@@ -205,6 +208,9 @@ public final class capturaHuellaRemoto extends javax.swing.JFrame {
     public void start(){
         Lector.startCapture();
         EnviarTexto("Utilizando el lector de huella digital");
+       // for (Webcam webcam : Webcam.getWebcams()) {
+         //   comboCamaras.addItem(webcam.getName());
+        //}
     }
     
     public void stop(){
